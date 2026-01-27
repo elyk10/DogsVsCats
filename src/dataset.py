@@ -17,7 +17,8 @@ class ImageDataset(Dataset):
             classDir = Path(self.rootDir) / className
             
             for imgPath in classDir.iterdir(): # loop through each file in directory
-                self.imgPathsAndLabels.append((imgPath, label))
+                if imgPath.suffix in {".jpg", ".jpeg", ".png"}:
+                    self.imgPathsAndLabels.append((imgPath, label))
 
     def __len__(self): # get length of dataset
         return len(self.imgPathsAndLabels)
@@ -29,6 +30,9 @@ class ImageDataset(Dataset):
         
         imgPath, label = self.imgPathsAndLabels[idx]
 
-        image = Image.open(imgPath) #.convert("RGB")
+        image = decode_image(imgPath)#Image.open(imgPath).convert("RGB")
         
+        if self.transform:
+            image = self.transform(image)
+
         return image, label
