@@ -1,0 +1,9 @@
+# directories
+data/
+
+#virtual environment
+venv/
+
+
+#python
+__pycache__/
