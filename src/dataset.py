@@ -30,7 +30,7 @@ class ImageDataset(Dataset):
         
         imgPath, label = self.imgPathsAndLabels[idx]
 
-        image = decode_image(imgPath)#Image.open(imgPath).convert("RGB")
+        image = Image.open(imgPath) #decode_image(imgPath) - to tensor
         
         if self.transform:
             image = self.transform(image)
