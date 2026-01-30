@@ -2,11 +2,12 @@ from dataset import ImageDataset
 from pathlib import Path # for file paths 
 import matplotlib.pyplot as plt # for graph plotting and displaying
 import numpy as np # for array manipulation
+from tqdm import tqdm
 
 from torch import Generator, device
 import torch
 import torch.nn as nn
-from torch.utils.data import random_split, DataLoader # random_split - to split dataset into train and val | Dataloader - to create batches of dataset
+from torch.utils.data import random_split, DataLoader, Subset # random_split - to split dataset into train and val | Dataloader - to create batches of dataset | Subset - to use subset of data for trail
 from torchvision import transforms
 from torchvision.models import resnet18, ResNet18_Weights
 
@@ -15,8 +16,8 @@ ROOT = Path(__file__).parent / ".."
 
 IMG_SIZE = 256 # height and width to change image to
 CROP_SIZE = 224
-TRAIN_SPLIT = 0.8 # percentage to split the data by
-VAL_SPLIT = 0.1 # percentage for validation split size
+TRAIN_SPLIT = 0.72 # percentage to split the data by
+VAL_SPLIT = 0.18 # percentage for validation split size
 BATCH_SIZE = 64 # number of data samples being used in each batch
 WORKERS = 0 # number of parallel processes for loading data in
 EPOCHS = 5
@@ -30,7 +31,8 @@ device = device("cuda" if torch.cuda.is_available() else "cpu") # will use gpu i
 # obj of transform used to transform images when loaded in with given size, to a tensor and given normals
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)), 
+transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)),
+                                  # transforms 
                                    transforms.CenterCrop(CROP_SIZE), 
                                    transforms.ToTensor(), 
                                    transforms.Normalize(mean, std)])
@@ -49,7 +51,7 @@ def trainModel(model, loader, optimizer, criterion):
     runningLoss = 0 # running total of how wrong the model prediction is and how confident it is in it
     runningCorrects = 0 # running total of how correct the model is
 
-    for inputs, labels in loader:
+    for inputs, labels in tqdm(loader):
         optimizer.zero_grad() # zero gradient for every batch
         outputs = model(inputs) # making predictions
         loss = criterion(outputs, labels) # calculate loss
@@ -58,10 +60,25 @@ def trainModel(model, loader, optimizer, criterion):
 
         runningLoss += loss.item() * inputs.size(0) # average loss of outputs multiplied by batch size to later average runningLoss by dataset size
         runningCorrects += (outputs.argmax(1) == labels).sum().item() # adds the amount of correct predictions to the running total
+        
+    return runningLoss / len(loader.dataset), runningCorrects / len(loader.dataset)
+
+def valModel(model, loader, criterion): # same as training model just no self correcting
+    model.eval()
+
+    runningLoss = 0 # running total of how wrong the model prediction is and how confident it is in it
+    runningCorrects = 0 # running total of how correct the model is
+    
+    with torch.no_grad():
+        for inputs, labels in loader:
+            outputs = model(inputs) # making predictions
+            loss = criterion(outputs, labels) # calculate loss
+        
+            runningLoss += loss.item() * inputs.size(0) # average loss of outputs multiplied by batch size to later average runningLoss by dataset size
+            runningCorrects += (outputs.argmax(1) == labels).sum().item() # adds the amount of correct predictions to the running total
 
 
     return runningLoss / len(loader.dataset), runningCorrects / len(loader.dataset)
-
 
 
 
@@ -71,6 +88,13 @@ def main():
     # --------------
     datasetDir = ROOT / "data"
     dataset = ImageDataset(datasetDir, transformOBJ)
+
+    ### -- for test purposes
+    subsetSize = int(len(dataset) * 0.05)
+    torch.manual_seed(SEED)
+    indices = torch.randperm(len(dataset))[:subsetSize]
+    dataset = Subset(dataset, indices)
+
     print(f"Length of dataset: {len(dataset)}")
     image, label = dataset[3]
     print(type(image))
@@ -89,7 +113,7 @@ def main():
     # --------------
     # Task 2
     # --------------
-    
+
     trainSize = int(len(dataset) * TRAIN_SPLIT)
     valSize = int(len(dataset) * VAL_SPLIT)
     testSize = len(dataset) - trainSize - valSize
@@ -102,8 +126,8 @@ def main():
     valLoader = DataLoader(valDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS)
 
     #checking to make sure loaders can be iterated
-    batchOne = next(iter(trainLoader))
-    batchTwo = next(iter(valLoader))
+    #batchOne = next(iter(trainLoader))
+    #batchTwo = next(iter(valLoader))
 
     #checking to make sure splits are correct
     print(len(trainLoader))
@@ -131,8 +155,13 @@ def main():
     criterion = nn.CrossEntropyLoss() # logs probability of correct class
 
     for epoch in range(EPOCHS):
-        #trainLoss, trainAcc = trainModel(model, trainLoader, optimizer, criterion)
-        print(f"EPOCH {epoch}:")
+        print(f"EPOCH [{epoch + 1} / {EPOCHS}]:")
+        trainLoss, trainAcc = trainModel(model, trainLoader, optimizer, criterion)
+        valLoss, valAcc = valModel(model, valLoader, criterion)
+
+        print(f"Train Loss: {trainLoss}, Train Accuraccy: {trainAcc}")
+        print(f"Validation Loss: {valLoss}, Validation Accuracy: {valAcc}")
+        
 
 
 main()
