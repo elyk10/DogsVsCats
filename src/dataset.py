@@ -18,7 +18,12 @@ class ImageDataset(Dataset):
             
             for imgPath in classDir.iterdir(): # loop through each file in directory
                 if imgPath.suffix in {".jpg", ".jpeg", ".png"}:
-                    self.imgPathsAndLabels.append((imgPath, label))
+                    try: # to make sure image file is not corrupted
+                        with Image.open(imgPath) as img:
+                            img.verify()
+                        self.imgPathsAndLabels.append((imgPath, label))
+                    except Exception:
+                        print(f"Removing corrupted image from dataset: {imgPath}")
 
     def __len__(self): # get length of dataset
         return len(self.imgPathsAndLabels)

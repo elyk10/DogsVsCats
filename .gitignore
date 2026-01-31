@@ -10,3 +10,6 @@ __pycache__/
 
 #notes
 notes.txt
+
+#word documents
+*.docx

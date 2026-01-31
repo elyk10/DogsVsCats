@@ -2,7 +2,7 @@ from dataset import ImageDataset
 from pathlib import Path # for file paths 
 import matplotlib.pyplot as plt # for graph plotting and displaying
 import numpy as np # for array manipulation
-from tqdm import tqdm
+from tqdm import tqdm # used for progress bar while completing epochs
 
 from torch import Generator, device
 import torch
@@ -13,6 +13,8 @@ from torchvision.models import resnet18, ResNet18_Weights
 
 #constants
 ROOT = Path(__file__).parent / ".."
+MODEL_DIR = Path("output") / "models"
+MODEL_DIR.mkdir(parents = True, exist_ok = True)
 
 IMG_SIZE = 256 # height and width to change image to
 CROP_SIZE = 224
@@ -52,6 +54,7 @@ def trainModel(model, loader, optimizer, criterion):
     runningCorrects = 0 # running total of how correct the model is
 
     for inputs, labels in tqdm(loader):
+        inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad() # zero gradient for every batch
         outputs = model(inputs) # making predictions
         loss = criterion(outputs, labels) # calculate loss
@@ -71,6 +74,7 @@ def valModel(model, loader, criterion): # same as training model just no self co
     
     with torch.no_grad():
         for inputs, labels in loader:
+            inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs) # making predictions
             loss = criterion(outputs, labels) # calculate loss
         
@@ -80,6 +84,27 @@ def valModel(model, loader, criterion): # same as training model just no self co
 
     return runningLoss / len(loader.dataset), runningCorrects / len(loader.dataset)
 
+def predModel(model, loader):
+    model.eval()
+    results = []
+
+    with model.no_grad():
+        for inputs, _, fileNames in loader:
+            inputs = inputs.to(device) 
+            outputs = model(inputs)
+            # get probability of output being all classes
+            probs = torch.softmax(outputs, dim = 1)
+            preds = probs.argmax(1).cpu().numpy()
+
+            # go through files and create tuples stored in results with file path and label of classification
+            for fName, pred in zip(fileNames, preds):
+                label = "cat"
+                if pred == 1:
+                    label = "dog"
+                results.append((fName, label))
+    
+    return results
+                
 
 
 def main():
@@ -90,7 +115,7 @@ def main():
     dataset = ImageDataset(datasetDir, transformOBJ)
 
     ### -- for test purposes
-    subsetSize = int(len(dataset) * 0.05)
+    subsetSize = int(len(dataset) * 0.01)
     torch.manual_seed(SEED)
     indices = torch.randperm(len(dataset))[:subsetSize]
     dataset = Subset(dataset, indices)
@@ -118,12 +143,12 @@ def main():
     valSize = int(len(dataset) * VAL_SPLIT)
     testSize = len(dataset) - trainSize - valSize
 
-    ##TODO implement test split as well --------------------------------------------
     trainDataset, valDataset, testDataset = random_split(dataset, [trainSize, valSize, testSize], gen)
     
 
     trainLoader = DataLoader(trainDataset, batch_size = BATCH_SIZE, shuffle = True, num_workers = WORKERS)
     valLoader = DataLoader(valDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS)
+    testLoader = DataLoader(testDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS)
 
     #checking to make sure loaders can be iterated
     #batchOne = next(iter(trainLoader))
@@ -150,10 +175,11 @@ def main():
     # Task 4
     # --------------
     optimizer = torch.optim.SGD(model.parameters(), 
-                                lr = 0.001,         # how big a stem the optimizer takes
+                                lr = 0.001,         # how big a step the optimizer takes
                                 momentum = 0.9)     # how much of precious update is rememebered
     criterion = nn.CrossEntropyLoss() # logs probability of correct class
 
+    # iterate through number of epochs
     for epoch in range(EPOCHS):
         print(f"EPOCH [{epoch + 1} / {EPOCHS}]:")
         trainLoss, trainAcc = trainModel(model, trainLoader, optimizer, criterion)
@@ -162,6 +188,24 @@ def main():
         print(f"Train Loss: {trainLoss}, Train Accuraccy: {trainAcc}")
         print(f"Validation Loss: {valLoss}, Validation Accuracy: {valAcc}")
         
+    # --------------
+    # Task 6
+    # --------------
+    
+    # save model to given model directory
+    modelPath = MODEL_DIR / "modelCatsVsDogs.pth"
+    torch.save(model.state_dict(), modelPath)
+    print(f"Model saved to {MODEL_DIR}")
+
+    # load saved model
+    savedModel = resnet18()
+    inFeatures = model.fc.in_features
+    savedModel.fc = nn.Linear(inFeatures, 2)
+    savedModel.load_state_dict(torch.load(modelPath, weights_only = True))
+
+    # make predictions and save in a csv or txt file
+    # save a few predicted images with label as well
+    # have to test on full dataset
 
 
 main()
