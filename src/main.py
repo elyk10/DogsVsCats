@@ -3,6 +3,8 @@ from pathlib import Path # for file paths
 import matplotlib.pyplot as plt # for graph plotting and displaying
 import numpy as np # for array manipulation
 from tqdm import tqdm # used for progress bar while completing epochs
+import csv
+import shutil
 
 from torch import Generator, device
 import torch
@@ -12,9 +14,13 @@ from torchvision import transforms
 from torchvision.models import resnet18, ResNet18_Weights
 
 #constants
+#file paths
 ROOT = Path(__file__).parent / ".."
-MODEL_DIR = Path("output") / "models"
+OUTPUT_PATH = Path("output") 
+MODEL_DIR = OUTPUT_PATH / "models"
 MODEL_DIR.mkdir(parents = True, exist_ok = True)
+PRED_DIR = OUTPUT_PATH / "predictions"
+PRED_DIR.mkdir(parents = True, exist_ok = True)
 
 IMG_SIZE = 256 # height and width to change image to
 CROP_SIZE = 224
@@ -53,7 +59,7 @@ def trainModel(model, loader, optimizer, criterion):
     runningLoss = 0 # running total of how wrong the model prediction is and how confident it is in it
     runningCorrects = 0 # running total of how correct the model is
 
-    for inputs, labels in tqdm(loader):
+    for inputs, labels, _ in tqdm(loader):
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad() # zero gradient for every batch
         outputs = model(inputs) # making predictions
@@ -73,7 +79,7 @@ def valModel(model, loader, criterion): # same as training model just no self co
     runningCorrects = 0 # running total of how correct the model is
     
     with torch.no_grad():
-        for inputs, labels in loader:
+        for inputs, labels, _ in loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs) # making predictions
             loss = criterion(outputs, labels) # calculate loss
@@ -88,20 +94,27 @@ def predModel(model, loader):
     model.eval()
     results = []
 
-    with model.no_grad():
-        for inputs, _, fileNames in loader:
+    with torch.no_grad():
+        for inputs, folders, fileNames in tqdm(loader, desc = "Predicting"):
             inputs = inputs.to(device) 
             outputs = model(inputs)
             # get probability of output being all classes
             probs = torch.softmax(outputs, dim = 1)
             preds = probs.argmax(1).cpu().numpy()
+            # get confidence in prediction
+            confs = probs.max(1).values.cpu().numpy()
 
             # go through files and create tuples stored in results with file path and label of classification
-            for fName, pred in zip(fileNames, preds):
+            for fName, folder, pred, conf in zip(fileNames, folders, preds, confs):
+                # prediction label
                 label = "cat"
                 if pred == 1:
                     label = "dog"
-                results.append((fName, label))
+                # folder image was in (cat or dog) to identify which image
+                folderName = "Cat"
+                if folder == 1:
+                    folderName = "Dog"
+                results.append((folderName + fName, label, conf))
     
     return results
                 
@@ -121,7 +134,7 @@ def main():
     dataset = Subset(dataset, indices)
 
     print(f"Length of dataset: {len(dataset)}")
-    image, label = dataset[3]
+    image, label, _ = dataset[3]
     print(type(image))
     if label == 0:
         print("Type: Cat")
@@ -202,9 +215,39 @@ def main():
     inFeatures = model.fc.in_features
     savedModel.fc = nn.Linear(inFeatures, 2)
     savedModel.load_state_dict(torch.load(modelPath, weights_only = True))
+    print(f"Model {modelPath} loaded in from disk")
 
-    # make predictions and save in a csv or txt file
+    # make predictions with saved model and save in a csv or txt file
     # save a few predicted images with label as well
+    print("Making predictions on test dataset")
+    preds = predModel(savedModel, testLoader)
+    csvPath = PRED_DIR / "predictions.csv"
+    # write predictions into csv file
+    with open(csvPath, "w", newline = "") as file:
+        writer = csv.writer(file)
+        writer.writerow(["filename", "predicted_label", "probability"])
+        writer.writerows(preds)
+
+    # take select images from predictions and move them into prediction file, renaming with prediction
+    predPhotos = 10 if len(preds) > 10 else len(preds)
+    i = 0
+    for pred in preds:
+        i += 1
+        if i >= predPhotos: # only does 10 photos or max length of preds
+            break
+        
+        fileAndFolderName = pred[0]
+        fileName = fileAndFolderName[3:]
+        folderName = fileAndFolderName[:3]
+        src = datasetDir / folderName / fileName
+        outFile = "pred" + str(i) + pred[1] + ".jpg"
+        dst = PRED_DIR / outFile
+        
+        shutil.copy2(src, dst)
+
+
+
+    print(f"Predictions saved to {PRED_DIR}")
     # have to test on full dataset
 
 
