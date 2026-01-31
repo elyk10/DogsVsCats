@@ -5,6 +5,7 @@ import numpy as np # for array manipulation
 from tqdm import tqdm # used for progress bar while completing epochs
 import csv
 import shutil
+from multiprocessing import freeze_support
 
 from torch import Generator, device
 import torch
@@ -27,7 +28,7 @@ CROP_SIZE = 224
 TRAIN_SPLIT = 0.72 # percentage to split the data by
 VAL_SPLIT = 0.18 # percentage for validation split size
 BATCH_SIZE = 64 # number of data samples being used in each batch
-WORKERS = 0 # number of parallel processes for loading data in
+WORKERS = 2 # number of parallel processes for loading data in
 EPOCHS = 5
 
 SEED = 18
@@ -44,6 +45,12 @@ transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)),
                                    transforms.CenterCrop(CROP_SIZE), 
                                    transforms.ToTensor(), 
                                    transforms.Normalize(mean, std)])
+
+def collateSkip(batch): # method created to skip data entries in batch that are none
+    batch = [i for i in batch if i is not None]
+    if len(batch == 0):
+        return None
+    return torch.utils.data.default_collate(batch)
 
 def createModel(): # creates ResNet18 model with 2 output classification layer
     model = resnet18(weights = ResNet18_Weights.DEFAULT) # create resnet18 model
@@ -121,6 +128,7 @@ def predModel(model, loader):
 
 
 def main():
+    print("Computer Vision Project Initialized")
     # --------------
     # Task 1
     # --------------
@@ -128,10 +136,10 @@ def main():
     dataset = ImageDataset(datasetDir, transformOBJ)
 
     ### -- for test purposes
-    subsetSize = int(len(dataset) * 0.01)
-    torch.manual_seed(SEED)
-    indices = torch.randperm(len(dataset))[:subsetSize]
-    dataset = Subset(dataset, indices)
+    #subsetSize = int(len(dataset) * 0.01)
+    #torch.manual_seed(SEED)
+    #indices = torch.randperm(len(dataset))[:subsetSize]
+    #dataset = Subset(dataset, indices)
 
     print(f"Length of dataset: {len(dataset)}")
     image, label, _ = dataset[3]
@@ -159,9 +167,9 @@ def main():
     trainDataset, valDataset, testDataset = random_split(dataset, [trainSize, valSize, testSize], gen)
     
 
-    trainLoader = DataLoader(trainDataset, batch_size = BATCH_SIZE, shuffle = True, num_workers = WORKERS)
-    valLoader = DataLoader(valDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS)
-    testLoader = DataLoader(testDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS)
+    trainLoader = DataLoader(trainDataset, batch_size = BATCH_SIZE, shuffle = True, num_workers = WORKERS, collate_fn = collateSkip)
+    valLoader = DataLoader(valDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS, collate_fn = collateSkip)
+    testLoader = DataLoader(testDataset, batch_size = BATCH_SIZE, shuffle = False, num_workers = WORKERS, collate_fn = collateSkip)
 
     #checking to make sure loaders can be iterated
     #batchOne = next(iter(trainLoader))
@@ -192,6 +200,10 @@ def main():
                                 momentum = 0.9)     # how much of precious update is rememebered
     criterion = nn.CrossEntropyLoss() # logs probability of correct class
 
+    tLoss = []
+    tAcc = []
+    vLoss = []
+    vAcc = []
     # iterate through number of epochs
     for epoch in range(EPOCHS):
         print(f"EPOCH [{epoch + 1} / {EPOCHS}]:")
@@ -199,7 +211,27 @@ def main():
         valLoss, valAcc = valModel(model, valLoader, criterion)
 
         print(f"Train Loss: {trainLoss}, Train Accuraccy: {trainAcc}")
+        tLoss.append(trainLoss)
+        tAcc.append(trainAcc)
         print(f"Validation Loss: {valLoss}, Validation Accuracy: {valAcc}")
+        vLoss.append(valLoss)
+        vAcc.append(valAcc)
+
+        plt.plot(tLoss, label = "Training Loss")
+        plt.plot(vLoss, label = "Validation Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training vs Validation Loss")
+        plt.legend()
+        plt.show()
+
+        plt.plot(tAcc, label = "Training Accuracy")
+        plt.plot(vAcc, label = "Validation Accuracy")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title("Training vs Validation Accuracy")
+        plt.legend()
+        plt.show()
         
     # --------------
     # Task 6
@@ -248,7 +280,7 @@ def main():
 
 
     print(f"Predictions saved to {PRED_DIR}")
-    # have to test on full dataset
 
-
-main()
+if __name__ == "__main__":
+    freeze_support()
+    main()

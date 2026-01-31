@@ -1,5 +1,6 @@
 from pathlib import Path # for file path
 from PIL import Image # for images
+import warnings
 
 from torchvision.io import decode_image
 from torch.utils.data import Dataset
@@ -35,9 +36,14 @@ class ImageDataset(Dataset):
         
         imgPath, label = self.imgPathsAndLabels[idx]
 
-        image = Image.open(imgPath).convert("RGB") #decode_image(imgPath) - to tensor
+        try: # to make sure image loads properly
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", UserWarning)
+                image = Image.open(imgPath).convert("RGB") #decode_image(imgPath) - to tensor
         
-        if self.transform:
-            image = self.transform(image)
+            if self.transform:
+                image = self.transform(image)
 
-        return image, label, imgPath.name
+            return image, label, imgPath.name
+        except Exception: # returns none if image is corrupt
+            return None
