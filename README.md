@@ -4,15 +4,23 @@ Machine Learning Project with focus on Computer Vision and Data Handling. Uses d
 ## Instructions to Run:
 Ensure Python is installed on computer
 For a Windows computer open the command prompt from folder holding “src” and “data” folder and run the following commands or run the “startup.bat” file. The following commands and the .bat file are used to set up a virtual environment, activate it and install the required dependencies.<br> 
+```
     python -m venv venv<br>
     .\venv\Scripts\activate<br>
+```
 To use CPU for processing:<br>
-	pip install torch torchvision matplotlib numpy tqdm pillow <br>
+```
+	pip install torch torchvision matplotlib numpy tqdm pillow 
+```
 If you have a GPU you can use the following commands to use it for processing:<br>
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126 <br>
-    pip install matplotlib numpy tqdm pillow <br>
+```
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126 
+    pip install matplotlib numpy tqdm pillow 
+```
 Once all the above is set up, you can run the code with the following command from the same directory<br>
+```
     python src\main.py
+```
 
 ## Requirements
 * Python 3.13.7
