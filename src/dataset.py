@@ -1,3 +1,10 @@
+"""
+dataset.py
+Contains class ImageDataset
+By: Kyle Webster
+
+"""
+
 from pathlib import Path # for file path
 from PIL import Image # for images
 import warnings
@@ -8,6 +15,18 @@ from torch.utils.data import Dataset
 
 class ImageDataset(Dataset):
     def __init__(self, rootDir, transform = None): # initialze instance of class
+        """
+        Initialization method to create instance of ImageDataset
+        
+        Arugments:
+            self: reference to self
+            rootDir: directory path from root with dataset
+            transform: function to transform image for retrieval
+
+        Returns:
+            None
+
+        """
         self.rootDir = rootDir # directory path from root with image dataset
         self.transform = transform # transform function to transform image
         self.imgPathsAndLabels = [] # will have all image paths loaded numerically starting with all the cats and then the dogs.
@@ -27,10 +46,32 @@ class ImageDataset(Dataset):
                         print(f"Removing corrupted image from dataset: {imgPath}")
 
     def __len__(self): # get length of dataset
+        """
+        Returns length of dataset in instance of ImageDataset
+        
+        Arguments:
+            self: reference to self
+
+        Returns:
+            length of dataset in self
+
+        """
         return len(self.imgPathsAndLabels)
         
     
     def __getitem__(self, idx): # get image and label in dataset of specified index
+        """
+        Gets item in dataset at specified index
+        
+        Arguments:
+            self: reference to self
+            idx: index that data is to be retrieved from
+
+        Returns:
+            PIL image of given index, classification label of image, path the image is in directory
+            or None if image is corrupt
+
+        """
         if idx >= self.__len__():
             raise ValueError("Index is out of range of dataset")
         

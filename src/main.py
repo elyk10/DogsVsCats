@@ -1,3 +1,9 @@
+"""
+main.py
+Contains main function to run for computer vision project
+By: Kyle Webster
+
+"""
 from dataset import ImageDataset
 from pathlib import Path # for file paths 
 import matplotlib.pyplot as plt # for graph plotting and displaying
@@ -47,12 +53,32 @@ transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)),
                                    transforms.Normalize(mean, std)])
 
 def collateSkip(batch): # method created to skip data entries in batch that are none
+    """
+    Used to skip data that is None in a batch
+    
+    Arguments:
+        batch: batch to iterate through looking for None values
+
+    Returns:
+        batch with None valuse removed
+
+    """
     batch = [i for i in batch if i is not None]
     if len(batch == 0):
         return None
     return torch.utils.data.default_collate(batch)
 
 def createModel(): # creates ResNet18 model with 2 output classification layer
+    """
+    Create a cnn model using ResNet18
+
+    Arguments:
+        None
+
+    Returns:
+        ResNet18 model with default weights and classifying layer with 2 outputs
+
+    """
     model = resnet18(weights = ResNet18_Weights.DEFAULT) # create resnet18 model
     inFeatures = model.fc.in_features
     model.fc = nn.Linear(inFeatures, 2) # change the classifier layer to 2 outputs
@@ -61,6 +87,19 @@ def createModel(): # creates ResNet18 model with 2 output classification layer
     return model
 
 def trainModel(model, loader, optimizer, criterion):
+    """
+    Train model with self correcting and optimization
+    
+    Arguments:
+        model: model being used to evaluate dataset
+        loader: dataset loader containing data to be evaluated
+        optimizer: used to update weights of model
+        criterion: the loss function to determine loss of model
+
+    Returns:
+        the loss and accuracy value of the model for the given dataset in the loader
+        
+    """
     model.train()
 
     runningLoss = 0 # running total of how wrong the model prediction is and how confident it is in it
@@ -80,6 +119,18 @@ def trainModel(model, loader, optimizer, criterion):
     return runningLoss / len(loader.dataset), runningCorrects / len(loader.dataset)
 
 def valModel(model, loader, criterion): # same as training model just no self correcting
+    """
+    Validate model without any self correcting
+    
+    Arguments:
+        model: model being used to evaluate dataset
+        loader: dataset loader containing data to be evaluated
+        criterion: the loss function to determine loss of model
+
+    Returns:
+        the loss and accuracy value of the model for the given dataset in the loader
+        
+    """
     model.eval()
 
     runningLoss = 0 # running total of how wrong the model prediction is and how confident it is in it
@@ -98,6 +149,18 @@ def valModel(model, loader, criterion): # same as training model just no self co
     return runningLoss / len(loader.dataset), runningCorrects / len(loader.dataset)
 
 def predModel(model, loader):
+    """
+    Predicts dataset items classification between dog or cat
+    
+    Arguments:
+        model: model being used to evaluate dataset
+        loader: dataset loader containing data to be evaluated
+
+    Returns:
+        list of tuples for each item in the dataset containing the file path as a string, the 
+        label of cat or dog and the models confidence of the label being correct
+
+    """
     model.eval()
     results = []
 
@@ -134,12 +197,6 @@ def main():
     # --------------
     datasetDir = ROOT / "data"
     dataset = ImageDataset(datasetDir, transformOBJ)
-
-    ### -- for test purposes
-    #subsetSize = int(len(dataset) * 0.01)
-    #torch.manual_seed(SEED)
-    #indices = torch.randperm(len(dataset))[:subsetSize]
-    #dataset = Subset(dataset, indices)
 
     print(f"Length of dataset: {len(dataset)}")
     image, label, _ = dataset[3]
@@ -247,6 +304,7 @@ def main():
     inFeatures = model.fc.in_features
     savedModel.fc = nn.Linear(inFeatures, 2)
     savedModel.load_state_dict(torch.load(modelPath, weights_only = True))
+    savedModel.to(device)
     print(f"Model {modelPath} loaded in from disk")
 
     # make predictions with saved model and save in a csv or txt file
