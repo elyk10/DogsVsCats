@@ -9,7 +9,7 @@ For a Windows computer open the command prompt from folder holding “src” and
 To use CPU for processing:<br>
 	pip install torch torchvision matplotlib numpy tqdm pillow <br>
 If you have a GPU you can use the following commands to use it for processing:<br>
-    pip install torch torchvision<br> --index-url https://download.pytorch.org/whl/cu126 <br>
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126 <br>
     pip install matplotlib numpy tqdm pillow <br>
 Once all the above is set up, you can run the code with the following command from the same directory<br>
     python src\main.py
