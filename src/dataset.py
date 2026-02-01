@@ -1,4 +1,5 @@
 """
+Computer Vision Cats vs Dogs Project
 dataset.py
 Contains class ImageDataset
 By: Kyle Webster

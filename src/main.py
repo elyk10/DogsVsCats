@@ -1,4 +1,5 @@
 """
+Computer Vision Cats vs Dogs Project
 main.py
 Contains main function to run for computer vision project
 By: Kyle Webster
