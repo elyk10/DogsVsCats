@@ -32,10 +32,11 @@ Once all the above is set up, you can run the code with the following command fr
 
 
 ## Results
-Final Training Loss: 1.057%<br>
-Final Training Accuracy: 99.699%<br>
-Final Validation Loss: 2.487%<br>
-Final Validation Accuracy: 99.244%
+Final Training Loss: 0.039%<br>
+Final Training Accuracy: 99.988%<br>
+Final Validation Loss: 3.219%<br>
+Final Validation Accuracy: 99.31%
+
 
 ### Line Graphs showing training and validation improvment over epochs
 ![image](./results/trainingVsValidationLoss.jpg)

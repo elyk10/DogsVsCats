@@ -36,7 +36,7 @@ TRAIN_SPLIT = 0.72 # percentage to split the data by
 VAL_SPLIT = 0.18 # percentage for validation split size
 BATCH_SIZE = 64 # number of data samples being used in each batch
 WORKERS = 2 # number of parallel processes for loading data in
-EPOCHS = 5
+EPOCHS = 25
 
 SEED = 18
 gen = Generator()
@@ -47,8 +47,7 @@ device = device("cuda" if torch.cuda.is_available() else "cpu") # will use gpu i
 # obj of transform used to transform images when loaded in with given size, to a tensor and given normals
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)),
-                                  # transforms 
+transformOBJ = transforms.Compose([transforms.Resize((IMG_SIZE, IMG_SIZE)), 
                                    transforms.CenterCrop(CROP_SIZE), 
                                    transforms.ToTensor(), 
                                    transforms.Normalize(mean, std)])
