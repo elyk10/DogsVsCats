@@ -32,9 +32,9 @@ Once all the above is set up, you can run the code with the following command fr
 
 
 ## Results
-Final Training Loss: 0.039%<br>
+Final Training Loss: 0.00039<br>
 Final Training Accuracy: 99.988%<br>
-Final Validation Loss: 3.219%<br>
+Final Validation Loss: 0.03219<br>
 Final Validation Accuracy: 99.31%
 
 
